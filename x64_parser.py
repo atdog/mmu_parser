@@ -2,8 +2,8 @@
 
 from pwn import *
 
-pid = 57564
-start = 0x7f03ebb4e000
+pid = 87178
+start = 0x7f53838b3000
 
 r = open("/proc/{}/mem".format(pid), 'rb')
 r.seek(start)
@@ -26,6 +26,11 @@ def expr(v):
         r += " N"
     return r.lstrip(' ')
 
+def add_dict(h, phy, virt):
+    if not h.has_key(phy):
+        h[phy] = []
+    h[phy].append(virt)
+
 h = {}
 attr = {}
 
@@ -35,6 +40,7 @@ for i in xrange(512):
         continue
     print "pml4t[{:-3d}]: {:016x} {}".format(i, pgpt, expr(pgpt))
     pgpt = (pgpt >> 12) << 12
+    add_dict(h, pgpt, 'pgpt')
 
     pgpt_tbl = mem[pgpt:]
     for j in xrange(512):
@@ -43,6 +49,7 @@ for i in xrange(512):
             continue
         print "\tpdpt[{:-3d}]: {:016x} {}".format(j, pdt, expr(pdt))
         pdt = (pdt >> 12) << 12
+        add_dict(h, pdt, 'pdpt')
 
         pdt_tbl = mem[pdt:]
         for k in xrange(512):
@@ -51,6 +58,7 @@ for i in xrange(512):
                 continue
             print "\t\tpdt[{:-3d}]: {:016x} {}".format(k, pt, expr(pt))
             pt = (pt >> 12) << 12
+            add_dict(h, pt, 'pt')
 
             pt_tbl = mem[pt:]
             for l in xrange(512):
@@ -61,10 +69,7 @@ for i in xrange(512):
                 print "\t\t\tpt[{:-3d}]: phy {:016x} - virt {:016x} {}".format(l, phy, virt, expr(phy))
                 attr[virt] = expr(phy)
                 phy = (phy >> 12) << 12
-                if not h.has_key(phy):
-                    h[phy] = []
-                h[phy].append(virt)
-print
+                add_dict(h, phy, virt)
 print "[duplicated entries]"
 import sys
 import collections
@@ -73,5 +78,18 @@ for phy, virt in od.iteritems():
     if len(virt) > 1:
         sys.stdout.write("{:016x} -".format(phy))
         for v in virt:
-            sys.stdout.write(" {:016x} [{}]".format(v, attr[v]))
+            try:
+                v.isdigit()
+            except:
+                e = attr[v]
+                if 'U' in e:
+                    sys.stdout.write("\033[1;33m {:016x} [{}]\033[0m".format(v, e))
+                else:
+                    sys.stdout.write("\033[1;30m {:016x} [{}]\033[0m".format(v, e))
+        for v in virt:
+            try:
+                v.isdigit()
+                sys.stdout.write("\033[1;31m [{:14s}] [table ]\033[0m".format(v))
+            except:
+                pass
         print
