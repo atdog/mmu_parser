@@ -40,7 +40,7 @@ for i in xrange(512):
         continue
     print "pml4t[{:-3d}]: {:016x} {}".format(i, pgpt, expr(pgpt))
     pgpt = (pgpt >> 12) << 12
-    add_dict(h, pgpt, 'pgpt')
+    add_dict(h, pgpt, '{:03d}.pgpt'.format(i))
 
     pgpt_tbl = mem[pgpt:]
     for j in xrange(512):
@@ -49,7 +49,7 @@ for i in xrange(512):
             continue
         print "\tpdpt[{:-3d}]: {:016x} {}".format(j, pdt, expr(pdt))
         pdt = (pdt >> 12) << 12
-        add_dict(h, pdt, 'pdpt')
+        add_dict(h, pdt, '{:03d}.{:03d}.pdpt'.format(i, j))
 
         pdt_tbl = mem[pdt:]
         for k in xrange(512):
@@ -58,7 +58,7 @@ for i in xrange(512):
                 continue
             print "\t\tpdt[{:-3d}]: {:016x} {}".format(k, pt, expr(pt))
             pt = (pt >> 12) << 12
-            add_dict(h, pt, 'pt')
+            add_dict(h, pt, '{:03d}.{:03d}.{:03d}.pt'.format(i, j, k))
 
             pt_tbl = mem[pt:]
             for l in xrange(512):
@@ -70,6 +70,8 @@ for i in xrange(512):
                 attr[virt] = expr(phy)
                 phy = (phy >> 12) << 12
                 add_dict(h, phy, virt)
+
+print
 print "[duplicated entries]"
 import sys
 import collections
